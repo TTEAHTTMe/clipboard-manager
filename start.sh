@@ -24,12 +24,67 @@ echo -e "${BLUE}=== ${APP_NAME} 启动脚本 ===${NC}"
 
 # 函数：检查端口是否被占用
 check_port() {
-    if netstat -tuln 2>/dev/null | grep -q ":${PORT} "; then
-        echo -e "${YELLOW}⚠️  端口 ${PORT} 已被占用${NC}"
-        return 1
+    if command -v netstat > /dev/null; then
+        if netstat -tuln 2>/dev/null | grep -q ":${PORT} "; then
+            echo -e "${YELLOW}⚠️  端口 ${PORT} 已被占用${NC}"
+            return 1
+        fi
+    elif command -v ss > /dev/null; then
+        if ss -tuln 2>/dev/null | grep -q ":${PORT} "; then
+            echo -e "${YELLOW}⚠️  端口 ${PORT} 已被占用${NC}"
+            return 1
+        fi
     else
-        echo -e "${GREEN}✅ 端口 ${PORT} 可用${NC}"
-        return 0
+        # 尝试使用lsof作为备选方案
+        if command -v lsof > /dev/null && lsof -i :${PORT} > /dev/null 2>&1; then
+            echo -e "${YELLOW}⚠️  端口 ${PORT} 已被占用${NC}"
+            return 1
+        fi
+    fi
+    echo -e "${GREEN}✅ 端口 ${PORT} 可用${NC}"
+    return 0
+}
+
+# 函数：获取占用端口的进程信息
+get_port_process() {
+    local port=$1
+    if command -v lsof > /dev/null; then
+        lsof -i :${port} 2>/dev/null | grep -v "COMMAND" | head -1
+    elif command -v netstat > /dev/null; then
+        netstat -tulnp 2>/dev/null | grep ":${port} " | head -1
+    elif command -v ss > /dev/null; then
+        ss -tulnp 2>/dev/null | grep ":${port} " | head -1
+    fi
+}
+
+# 函数：处理端口冲突
+handle_port_conflict() {
+    echo -e "${YELLOW}=== 处理端口冲突 ===${NC}"
+    
+    # 获取占用端口的进程信息
+    PROCESS_INFO=$(get_port_process ${PORT})
+    if [ -n "$PROCESS_INFO" ]; then
+        echo -e "${YELLOW}占用端口的进程信息：${NC}"
+        echo "$PROCESS_INFO"
+        
+        # 检查是否是我们的Java应用
+        if echo "$PROCESS_INFO" | grep -q "java.*app.jar"; then
+            echo -e "${YELLOW}发现旧的应用实例，将停止它${NC}"
+            stop_old_service
+            sleep 3
+            
+            # 再次检查端口
+            if check_port; then
+                return 0
+            fi
+        else
+            echo -e "${RED}❌ 端口 ${PORT} 被其他应用占用${NC}"
+            echo -e "${RED}请手动处理端口冲突或修改应用端口配置${NC}"
+            return 1
+        fi
+    else
+        echo -e "${RED}❌ 无法获取占用端口的进程信息${NC}"
+        return 1
     fi
 }
 
@@ -84,8 +139,12 @@ check_environment() {
         echo -e "${YELLOW}⚠️  数据库文件不存在，将自动创建${NC}"
     fi
     
-    # 检查端口
-    check_port || exit 1
+    # 检查端口 - 如果端口被占用，尝试处理冲突
+    if ! check_port; then
+        if ! handle_port_conflict; then
+            exit 1
+        fi
+    fi
 }
 
 # 函数：启动服务

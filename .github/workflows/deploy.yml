@@ -71,6 +71,12 @@ jobs:
             chmod +x start.sh stop.sh && \
             echo "=== 停止旧服务 ===" && \
             ./stop.sh || echo "停止服务时出错，继续部署..." && \
+            echo "=== 检查端口占用 ===" && \
+            if netstat -tuln 2>/dev/null | grep -q ":2345 "; then \
+              echo "端口2345被占用，尝试停止占用进程..." && \
+              pkill -f "java -jar app.jar" 2>/dev/null || true && \
+              sleep 3; \
+            fi && \
             echo "=== 启动新服务 ===" && \
             ./start.sh' || echo "部署失败"
           
