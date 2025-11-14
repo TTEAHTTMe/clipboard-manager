@@ -89,7 +89,7 @@ git push origin main
    scp stop-and-deploy.sh 用户名@服务器IP:/www/clip/
    
    # 设置执行权限
-   ssh 用户名@服务器IP 'chmod +x /www/clip/stop-and-deploy.sh'
+   ssh 用户名@your-domain.com 'chmod +x /www/clip/stop-and-deploy.sh'
    ```
 
 ### 第三步：配置GitHub Secrets（关键步骤）
@@ -103,7 +103,7 @@ git push origin main
 2. **配置服务器SSH**
    ```bash
    # 将公钥添加到服务器的 authorized_keys
-   cat github_deploy_key.pub | ssh 用户名@服务器IP 'cat >> ~/.ssh/authorized_keys'
+   cat github_deploy_key.pub | ssh 用户名@your-domain.com 'cat >> ~/.ssh/authorized_keys'
    ```
 
 3. **在GitHub仓库设置Secrets**
@@ -115,7 +115,7 @@ git push origin main
    | Secret名称 | 说明 | 示例值 |
    |------------|------|--------|
    | `DEPLOY_KEY` | SSH私钥内容 | 复制`github_deploy_key`文件的全部内容 |
-   | `SERVER_HOST` | 服务器IP地址 | `192.168.1.100` 或 `your-domain.com` |
+   | `SERVER_HOST` | 服务器地址 | `your-domain.com` 或 `192.168.1.100` |
    | `SERVER_USER` | SSH用户名 | `ubuntu` 或 `root` |
    | `SERVER_PORT` | SSH端口（可选） | `22` |
 
@@ -182,7 +182,7 @@ env:
 - name: 健康检查
   run: |
     sleep 10
-    curl -f http://${{ secrets.SERVER_HOST }}:2345 || exit 1
+    curl -f http://your-domain.com:2345 || exit 1
 ```
 
 ### 多环境部署
@@ -191,13 +191,13 @@ env:
 - name: 部署到开发环境
   if: github.ref == 'refs/heads/develop'
   env:
-    SERVER_HOST: ${{ secrets.DEV_SERVER_HOST }}
+    SERVER_HOST: your-dev-domain.com
 
 # 生产环境
 - name: 部署到生产环境
   if: github.ref == 'refs/heads/main'
   env:
-    SERVER_HOST: ${{ secrets.PROD_SERVER_HOST }}
+    SERVER_HOST: your-prod-domain.com
 ```
 
 ## 🚨 常见问题解决

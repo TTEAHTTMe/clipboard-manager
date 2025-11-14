@@ -69,8 +69,8 @@ jobs:
         else
           echo "⚠️ 未配置服务器信息，跳过自动部署"
           echo "💡 如需启用自动部署，请在GitHub仓库的Settings > Secrets中添加以下密钥："
-          echo "   - DEPLOY_KEY: SSH私钥"
-          echo "   - SERVER_HOST: 服务器地址"
+        echo "   - DEPLOY_KEY: SSH私钥"
+          echo "   - SERVER_HOST: 服务器地址(域名或IP)"
           echo "   - SERVER_USER: 服务器用户名"
           echo "   - SERVER_PORT: SSH端口(可选，默认22)"
         fi
@@ -86,7 +86,7 @@ jobs:
         echo "" >> release-notes.md
         echo "### 📋 应用信息" >> release-notes.md
         echo "- 应用名称：剪贴板管理器" >> release-notes.md
-        echo "- 访问地址：http://your-server:2345" >> release-notes.md
+        echo "- 访问地址：http://your-domain.com:2345" >> release-notes.md
         echo "- 构建时间：$(date '+%Y-%m-%d %H:%M:%S')" >> release-notes.md
     
     - name: 📤 上传发布说明

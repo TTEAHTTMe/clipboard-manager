@@ -49,5 +49,5 @@ echo - 访问GitHub Actions页面查看部署状态
 echo - 检查服务器上的应用是否正常运行
 echo.
 echo 📍 GitHub Actions页面：https://github.com/TTEAHTTMe/clipboard-manager/actions
-echo 📍 应用访问地址：http://3.34.136.13:2345
+echo 📍 应用访问地址：http://your-domain.com:2345
 pause
