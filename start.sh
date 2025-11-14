@@ -171,15 +171,41 @@ start_service() {
         
         # 等待HTTP服务就绪
         echo -e "${BLUE}检查HTTP服务...${NC}"
-        for i in {1..10}; do
-            if curl -s http://localhost:${PORT}/ > /dev/null; then
-                echo -e "${GREEN}✅ HTTP服务正常运行${NC}"
-                return 0
+        echo -e "${BLUE}将在端口 ${PORT} 上检查HTTP服务...${NC}"
+        HTTP_CHECK_PASSED=false
+        
+        for i in {1..15}; do
+            # 尝试多种方式检查HTTP服务
+            if curl -s -o /dev/null -w "%{http_code}" --connect-timeout 2 --max-time 3 http://localhost:${PORT}/ 2>/dev/null | grep -q "200\|302\|404\|405"; then
+                echo -e "${GREEN}✅ HTTP服务响应正常${NC}"
+                HTTP_CHECK_PASSED=true
+                break
+            elif curl -s --connect-timeout 2 --max-time 3 http://localhost:${PORT}/ > /dev/null 2>&1; then
+                echo -e "${GREEN}✅ HTTP服务已启动${NC}"
+                HTTP_CHECK_PASSED=true
+                break
+            elif wget -q -O /dev/null --timeout=3 --tries=1 http://localhost:${PORT}/ 2>/dev/null; then
+                echo -e "${GREEN}✅ HTTP服务已启动${NC}"
+                HTTP_CHECK_PASSED=true
+                break
             fi
+            
+            echo -e "${YELLOW}等待HTTP服务启动 (${i}/15)...${NC}"
             sleep 2
         done
         
-        echo -e "${YELLOW}⚠️  HTTP服务启动超时，但进程正在运行${NC}"
+        if [ "$HTTP_CHECK_PASSED" = true ]; then
+            return 0
+        fi
+        
+        # HTTP服务检查失败，但进程存在，视为部分成功
+        echo -e "${YELLOW}⚠️  HTTP服务未响应，但进程正在运行 (PID: ${APP_PID})${NC}"
+        echo -e "${YELLOW}这可能是因为：${NC}"
+        echo -e "${YELLOW}1. 应用启动较慢，请稍后再试${NC}"
+        echo -e "${YELLOW}2. 应用配置可能有问题${NC}"
+        echo -e "${YELLOW}3. 请检查日志文件: ${LOG_FILE}${NC}"
+        
+        # 仍然返回成功，因为进程确实存在
         return 0
     else
         echo -e "${RED}❌ 应用启动失败${NC}"

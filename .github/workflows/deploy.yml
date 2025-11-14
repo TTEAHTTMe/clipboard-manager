@@ -80,7 +80,14 @@ jobs:
               sleep 3; \
             fi && \
             echo "=== 启动新服务 ===" && \
-            ./start.sh' || DEPLOY_SUCCESS=false
+            echo "当前目录: $(pwd)" && \
+            echo "文件列表: $(ls -la)" && \
+            echo "开始执行 start.sh..." && \
+            ./start.sh && \
+            echo "start.sh 执行完成，返回码: $?" && \
+            echo "=== 检查最终状态 ===" && \
+            ps aux | grep java || echo "无Java进程" && \
+            netstat -tuln | grep :2345 || echo "端口2345未监听"' || DEPLOY_SUCCESS=false
           
           if [ "$DEPLOY_SUCCESS" = true ]; then
             echo "✅ 部署完成！"
