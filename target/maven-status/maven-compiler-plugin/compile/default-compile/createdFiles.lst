@@ -1,0 +1,6 @@
+com\clipboard\config\DatabaseConfig.class
+com\clipboard\entity\ClipboardItem.class
+com\clipboard\controller\ClipboardController.class
+com\clipboard\ClipboardManagerApplication.class
+com\clipboard\service\ClipboardItemService$1.class
+com\clipboard\service\ClipboardItemService.class

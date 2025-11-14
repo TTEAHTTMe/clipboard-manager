@@ -1,0 +1,14 @@
+{
+    "configurations": [
+        {
+            "type": "java",
+            "name": "Spring Boot-ClipboardManagerApplication<clipboard>",
+            "request": "launch",
+            "cwd": "${workspaceFolder}",
+            "mainClass": "com.clipboard.ClipboardManagerApplication",
+            "projectName": "clipboard",
+            "args": "",
+            "envFile": "${workspaceFolder}/.env"
+        }
+    ]
+}

@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>剪贴板管理器</title>
+    <link rel="icon" type="image/x-icon" href="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIHZpZXdCb3g9IjAgMCAzMiAzMiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjI0IiBoZWlnaHQ9IjI4IiB4PSI0IiB5PSIyIiBzdHJva2U9IiMzMzMiIHN0cm9rZS13aWR0aD0iMiIgZmlsbD0iI2Y4ZjlmYSIgcng9IjIiLz4KPHJlY3Qgd2lkdGg9IjE2IiBoZWlnaHQ9IjQiIHg9IjgiIHk9IjYiIHN0cm9rZT0iIzMzMyIgc3Ryb2tlLXdpZHRoPSIyIiBmaWxsPSIjZmZmIiByeD0iMSIvPgo8bGluZSB4MT0iOCIgeTE9IjE0IiB4Mj0iMjAiIHkyPSIxNCIgc3Ryb2tlPSIjMzMzIiBzdHJva2Utd2lkdGg9IjIiLz4KPGxpbmUgeDE9IjgiIHkxPSIxOCIgeDI9IjIwIiB5Mj0iMTgiIHN0cm9rZT0iIzMzMyIgc3Ryb2tlLXdpZHRoPSIyIi8+CjxsaW5lIHgxPSI4IiB5MT0iMjIiIHgyPSIxNiIgeTI9IjIyIiBzdHJva2U9IiMzMzMiIHN0cm9rZS13aWR0aD0iMiIvPgo8L3N2Zz4K">
+    <link rel="stylesheet" th:href="@{/css/style.css?v=}+${@environment.getProperty('app.version','1.0.0')}">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>剪贴板管理器</h1>
+            <div class="header-actions">
+                <div class="stats">
+                    <span>总计: <span th:text="${itemCount}">0</span> 条</span>
+                </div>
+                <div class="action-buttons" th:if="${items != null and not #lists.isEmpty(items)}">
+                    <button class="btn btn-danger" onclick="showClearModal()">清空所有</button>
+                </div>
+            </div>
+        </header>
+
+        <div class="add-section">
+            <!-- 错误信息显示 -->
+            <div th:if="${error}" class="error-message" th:text="${error}">
+                错误信息
+            </div>
+            <form th:action="@{/add}" method="post" class="add-form">
+                <textarea name="content" placeholder="输入剪贴板内容..." rows="3" required></textarea>
+                <button type="submit" class="btn btn-primary">添加内容</button>
+            </form>
+        </div>
+
+        <!-- 筛选区域 -->
+        <div class="filter-section">
+            <div class="filter-controls">
+                <div class="filter-group">
+                    <label for="timeFilter">时间筛选：</label>
+                    <select id="timeFilter" onchange="filterByTime()">
+                        <option value="all">全部时间</option>
+                        <option value="today">今天</option>
+                        <option value="week">本周</option>
+                        <option value="month">本月</option>
+                        <option value="custom">自定义时间</option>
+                    </select>
+                    <div id="customTimeRange" class="custom-time-range" style="display: none;">
+                        <input type="date" id="startDate" onchange="filterByTime()">
+                        <span> 至 </span>
+                        <input type="date" id="endDate" onchange="filterByTime()">
+                    </div>
+                </div>
+                <div class="filter-group">
+                    <select id="searchType" onchange="debouncedApplyFilters()">
+                        <option value="content">按内容搜索</option>
+                        <option value="annotation">按标注搜索</option>
+                    </select>
+                    <input type="text" id="searchInput" placeholder="搜索剪贴板内容..." class="search-input" oninput="debouncedApplyFilters()">
+                </div>
+                <div id="performanceTip" class="performance-tip" style="display: none;"></div>
+            </div>
+        </div>
+
+        <div class="items-section" th:if="${items != null and not #lists.isEmpty(items)}">
+            <div class="section-header">
+                <h2>剪贴板内容</h2>
+                <div class="bulk-actions">
+                    <label class="checkbox-container">
+                        <input type="checkbox" id="selectAll" onchange="toggleSelectAll()">
+                        <span class="checkmark"></span>
+                        <span>全选</span>
+                    </label>
+                    <button class="btn btn-sm btn-danger" id="deleteSelected" onclick="deleteSelectedItems()" disabled>删除选中</button>
+                </div>
+            </div>
+            <div class="items-list">
+                <div th:each="item : ${items}" class="item-card" th:id="'item-' + ${item.id}">
+                    <div class="item-header">
+                        <div class="item-left">
+                            <label class="checkbox-container">
+                                <input type="checkbox" class="item-checkbox" th:value="${item.id}" onchange="updateBulkActions()">
+                                <span class="checkmark"></span>
+                            </label>
+                            <span class="item-number" th:text="'#' + ${item.itemNumber}">#1</span>
+                        </div>
+                        <div class="item-actions">
+                            <button class="btn btn-sm btn-copy" th:data-content="${item.content}" onclick="copyToClipboard(this)">复制</button>
+                            <button class="btn btn-sm btn-annotate" th:onclick="'toggleAnnotation(' + ${item.id} + ')'" th:data-annotation="${item.annotation}">标注</button>
+                            <button class="btn btn-sm btn-danger" th:onclick="'deleteItem(' + ${item.id} + ')'">删除</button>
+                        </div>
+                    </div>
+                    <div class="item-content">
+                        <div class="content-preview" th:id="'preview-' + ${item.id}">
+                            <span th:text="${#strings.abbreviate(item.content, 100)}">内容预览</span>
+                            <button th:if="${#strings.length(item.content) > 100}" 
+                                    class="btn-toggle" 
+                                    th:onclick="'toggleContent(' + ${item.id} + ')'">展开</button>
+                        </div>
+                        <div class="content-full" th:id="'full-' + ${item.id}" style="display: none;">
+                            <pre th:text="${item.content}">完整内容</pre>
+                            <button class="btn-toggle" th:onclick="'toggleContent(' + ${item.id} + ')'">收起</button>
+                        </div>
+                    </div>
+                    <div class="item-meta">
+                        <small th:text="${#temporals.format(item.createdAt, 'yyyy-MM-dd HH:mm')}">创建时间</small>
+                    </div>
+                    <div th:if="${item.annotation != null and item.annotation != ''}" class="item-annotation">
+                        <span class="annotation-label">标注：</span>
+                        <span class="annotation-text" th:text="${item.annotation}">标注内容</span>
+                    </div>
+                    <div class="annotation-editor" th:id="'annotation-editor-' + ${item.id}" style="display: none;">
+                        <textarea class="annotation-input" th:id="'annotation-input-' + ${item.id}" placeholder="添加标注说明..."></textarea>
+                        <div class="annotation-actions">
+                            <button class="btn btn-sm btn-primary" th:onclick="'saveAnnotation(' + ${item.id} + ')'">保存</button>
+                            <button class="btn btn-sm btn-secondary" th:onclick="'cancelAnnotation(' + ${item.id} + ')'">取消</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="empty-state" th:if="${items == null or #lists.isEmpty(items)}">
+            <div class="empty-icon">📋</div>
+            <p>暂无剪贴板内容</p>
+            <p class="empty-hint">在上方输入框中添加第一条内容吧！</p>
+        </div>
+    </div>
+
+    <!-- 删除确认模态框 -->
+    <div id="deleteModal" class="modal">
+        <div class="modal-content">
+            <h3>确认删除</h3>
+            <p>确定要删除这条剪贴板内容吗？</p>
+            <div class="modal-actions">
+                <button class="btn btn-secondary" onclick="closeDeleteModal()">取消</button>
+                <button id="confirmDelete" class="btn btn-danger">删除</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 清空确认模态框 -->
+    <div id="clearModal" class="modal">
+        <div class="modal-content">
+            <h3>确认清空</h3>
+            <p>确定要清空所有剪贴板内容吗？此操作不可恢复！</p>
+            <div class="modal-actions">
+                <button class="btn btn-secondary" onclick="closeClearModal()">取消</button>
+                <form th:action="@{/clear}" method="post" style="display: inline;">
+                    <button type="submit" class="btn btn-danger">确认清空</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- 批量删除确认模态框 -->
+    <div id="bulkDeleteModal" class="modal">
+        <div class="modal-content">
+            <h3>确认批量删除</h3>
+            <p>确定要删除选中的 <span id="selectedCount">0</span> 条剪贴板内容吗？</p>
+            <div class="modal-actions">
+                <button class="btn btn-secondary" onclick="closeBulkDeleteModal()">取消</button>
+                <button id="confirmBulkDelete" class="btn btn-danger">确认删除</button>
+            </div>
+        </div>
+    </div>
+
+    <script th:src="@{/js/clipboard.js?v=}+${@environment.getProperty('app.version','1.0.0')}"></script>
+</body>
+</html>
