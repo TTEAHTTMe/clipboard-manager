@@ -354,6 +354,12 @@ function checkTimeFilter(itemDateStr, filterType) {
         case 'today':
             return itemDate >= today;
             
+        case 'yesterday':
+            const yesterdayStart = new Date(today);
+            yesterdayStart.setDate(yesterdayStart.getDate() - 1);
+            const yesterdayEnd = new Date(today);
+            return itemDate >= yesterdayStart && itemDate < yesterdayEnd;
+            
         case 'week':
             const weekAgo = new Date(today);
             weekAgo.setDate(weekAgo.getDate() - 7);
