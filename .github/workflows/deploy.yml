@@ -66,11 +66,13 @@ jobs:
           
           # 设置脚本权限并执行部署
           echo "🔧 执行部署..."
+          DEPLOY_SUCCESS=true
+          
           ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no -p ${SERVER_PORT:-22} ${SERVER_USER}@${SERVER_HOST} \
             'cd /www/clip && \
             chmod +x start.sh stop.sh && \
             echo "=== 停止旧服务 ===" && \
-            ./stop.sh || echo "停止服务时出错，继续部署..." && \
+            ./stop.sh || { echo "停止服务时出错，继续部署..."; } && \
             echo "=== 检查端口占用 ===" && \
             if netstat -tuln 2>/dev/null | grep -q ":2345 "; then \
               echo "端口2345被占用，尝试停止占用进程..." && \
@@ -78,9 +80,14 @@ jobs:
               sleep 3; \
             fi && \
             echo "=== 启动新服务 ===" && \
-            ./start.sh' || echo "部署失败"
+            ./start.sh' || DEPLOY_SUCCESS=false
           
-          echo "✅ 部署完成！"
+          if [ "$DEPLOY_SUCCESS" = true ]; then
+            echo "✅ 部署完成！"
+          else
+            echo "❌ 部署失败"
+            exit 1
+          fi
         else
           echo "⚠️ 未配置服务器信息，跳过自动部署"
           echo "💡 如需启用自动部署，请在GitHub仓库的Settings > Secrets中添加以下密钥："

@@ -25,7 +25,11 @@ if pgrep -f "java -jar ${JAR_FILE}" > /dev/null; then
     echo -e "${BLUE}正在停止服务...${NC}"
     
     # 先尝试正常停止
-    pkill -f "java -jar ${JAR_FILE}" 2>/dev/null || true
+    if pkill -f "java -jar ${JAR_FILE}" 2>/dev/null; then
+        echo -e "${YELLOW}已发送停止信号，等待服务停止...${NC}"
+    else
+        echo -e "${YELLOW}无法通过正常方式停止，尝试强制停止...${NC}"
+    fi
     
     # 等待最多10秒
     for i in {1..10}; do
@@ -43,6 +47,7 @@ if pgrep -f "java -jar ${JAR_FILE}" > /dev/null; then
     # 最终检查
     if ! pgrep -f "java -jar ${JAR_FILE}" > /dev/null; then
         echo -e "${GREEN}✅ 服务已强制停止${NC}"
+        exit 0
     else
         echo -e "${RED}❌ 无法停止服务，请手动处理${NC}"
         exit 1

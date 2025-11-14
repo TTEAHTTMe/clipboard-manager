@@ -198,6 +198,18 @@ show_status() {
         echo -e "${GREEN}✅ 服务运行中 (PID: ${PID})${NC}"
         echo -e "${GREEN}🌐 访问地址: http://localhost:${PORT}${NC}"
         
+        # 检查HTTP服务状态
+        if curl -s -o /dev/null -w "%{http_code}" http://localhost:${PORT}/ | grep -q "200\|302\|404"; then
+            echo -e "${GREEN}✅ HTTP服务响应正常${NC}"
+        else
+            echo -e "${YELLOW}⚠️  HTTP服务可能未完全就绪${NC}"
+        fi
+        return 0
+    else
+        echo -e "${RED}❌ 服务未运行${NC}"
+        return 1
+    fi
+        
         # 显示日志中的关键信息
         if [ -f "${LOG_FILE}" ]; then
             echo -e "${BLUE}=== 启动日志 ===${NC}"
@@ -219,14 +231,25 @@ main() {
     # 执行步骤
     check_environment
     stop_old_service
-    start_service && show_status || exit 1
     
-    echo -e "${BLUE}=== 部署完成 ===${NC}"
-    echo -e "${GREEN}🎉 ${APP_NAME} 启动成功！${NC}"
-    echo -e "${GREEN}🌐 请访问: http://localhost:${PORT}${NC}"
+    # 启动服务并捕获结果
+    if start_service; then
+        show_status
+        echo -e "${BLUE}=== 部署完成 ===${NC}"
+        echo -e "${GREEN}🎉 ${APP_NAME} 启动成功！${NC}"
+        echo -e "${GREEN}🌐 请访问: http://localhost:${PORT}${NC}"
+        return 0
+    else
+        echo -e "${RED}❌ 启动失败，请检查日志文件: ${LOG_FILE}${NC}"
+        return 1
+    fi
 }
 
 # 如果脚本被直接执行
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
-    main "$@"
+    if main "$@"; then
+        exit 0
+    else
+        exit 1
+    fi
 fi
