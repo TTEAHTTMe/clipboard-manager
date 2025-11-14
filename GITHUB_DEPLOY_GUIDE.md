@@ -49,7 +49,7 @@ git push origin main
 2. **关联本地仓库到GitHub**
    ```bash
    # 添加远程仓库（替换为你的仓库地址）
-   git remote add origin https://github.com/你的用户名/clipboard-manager.git
+   git remote add origin https://github.com/TTEAHTTMe/clipboard-manager.git
    
    # 推送到GitHub
    git push -u origin main
