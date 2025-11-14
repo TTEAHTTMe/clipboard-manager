@@ -3,14 +3,25 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>剪贴板管理器</title>
-    <link rel="icon" type="image/x-icon" href="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIHZpZXdCb3g9IjAgMCAzMiAzMiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjI0IiBoZWlnaHQ9IjI4IiB4PSI0IiB5PSIyIiBzdHJva2U9IiMzMzMiIHN0cm9rZS13aWR0aD0iMiIgZmlsbD0iI2Y4ZjlmYSIgcng9IjIiLz4KPHJlY3Qgd2lkdGg9IjE2IiBoZWlnaHQ9IjQiIHg9IjgiIHk9IjYiIHN0cm9rZT0iIzMzMyIgc3Ryb2tlLXdpZHRoPSIyIiBmaWxsPSIjZmZmIiByeD0iMSIvPgo8bGluZSB4MT0iOCIgeTE9IjE0IiB4Mj0iMjAiIHkyPSIxNCIgc3Ryb2tlPSIjMzMzIiBzdHJva2Utd2lkdGg9IjIiLz4KPGxpbmUgeDE9IjgiIHkxPSIxOCIgeDI9IjIwIiB5Mj0iMTgiIHN0cm9rZT0iIzMzMyIgc3Ryb2tlLXdpZHRoPSIyIi8+CjxsaW5lIHgxPSI4IiB5MT0iMjIiIHgyPSIxNiIgeTI9IjIyIiBzdHJva2U9IiMzMzMiIHN0cm9rZS13aWR0aD0iMiIvPgo8L3N2Zz4K">
+    <title>网页剪贴板</title>
+    <link rel="icon" type="image/x-icon" href="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIHZpZXdCb3g9IjAgMCAzMiAzMiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTggNEwyNCAyVjI2TDggMjhWNFoiIGZpbGw9IiM1YTlmZTYiLz4KPHBhdGggZD0iTTI0IDJMMjYgNlYzMEwyNCAyNlYyWiIgZmlsbD0iIzRhOTBlMiIvPgo8cGF0aCBkPSJNOCA0TDI0IDJMMjYgNkwxMCA4TDggNFoiIGZpbGw9IiM2YWI3ZmYiLz4KPHJlY3QgeD0iMTIiIHk9IjgiIHdpZHRoPSI4IiBoZWlnaHQ9IjMiIHJ4PSIxIiBmaWxsPSIjZmZmZmZmIi8+CjxsaW5lIHgxPSIxMCIgeTE9IjE1IiB4Mj0iMjIiIHkyPSIxNSIgc3Ryb2tlPSIjZmZmZmZmIiBzdHJva2Utd2lkdGg9IjIiLz4KPGxpbmUgeDE9IjEwIiB5MT0iMTkiIHgyPSIyMiIgeTI9IjE5IiBzdHJva2U9IiNmZmZmZmYiIHN0cm9rZS13aWR0aD0iMiIvPgo8bGluZSB4MT0iMTAiIHkxPSIyMyIgeDI9IjE4IiB5Mj0iMjMiIHN0cm9rZT0iI2ZmZmZmZiIgc3Ryb2tlLXdpZHRoPSIyIi8+Cjwvc3ZnPgo=">
     <link rel="stylesheet" th:href="@{/css/style.css?v=}+${@environment.getProperty('app.version','1.0.0')}">
 </head>
 <body>
     <div class="container">
         <header>
-            <h1>剪贴板管理器</h1>
+            <h1>
+                <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" style="vertical-align: middle; margin-right: 10px;">
+                    <path d="M8 4L24 2V26L8 28V4Z" fill="#5a9fe6"/>
+                    <path d="M24 2L26 6V30L24 26V2Z" fill="#4a90e2"/>
+                    <path d="M8 4L24 2L26 6L10 8L8 4Z" fill="#6ab7ff"/>
+                    <rect x="12" y="8" width="8" height="3" rx="1" fill="#ffffff"/>
+                    <line x1="10" y1="15" x2="22" y2="15" stroke="#ffffff" stroke-width="2"/>
+                    <line x1="10" y1="19" x2="22" y2="19" stroke="#ffffff" stroke-width="2"/>
+                    <line x1="10" y1="23" x2="18" y2="23" stroke="#ffffff" stroke-width="2"/>
+                </svg>
+                网页剪贴板
+            </h1>
             <div class="header-actions">
                 <div class="stats">
                     <span>总计: <span th:text="${itemCount}">0</span> 条</span>
