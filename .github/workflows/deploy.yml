@@ -1,0 +1,97 @@
+name: 🚀 自动部署剪贴板管理器
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 📥 检出代码
+      uses: actions/checkout@v4
+    
+    - name: ☕ 设置Java环境
+      uses: actions/setup-java@v3
+      with:
+        java-version: '8'
+        distribution: 'temurin'
+    
+    - name: 🔧 设置Maven缓存
+      uses: actions/cache@v3
+      with:
+        path: ~/.m2
+        key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
+        restore-keys: ${{ runner.os }}-m2
+    
+    - name: 🏗️ 构建应用
+      run: mvn clean package -DskipTests
+    
+    - name: 📊 上传构建结果
+      uses: actions/upload-artifact@v3
+      with:
+        name: jar-artifact
+        path: target/*.jar
+    
+    - name: 🚀 部署到服务器（可选）
+      if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+      env:
+        DEPLOY_KEY: ${{ secrets.DEPLOY_KEY }}
+        SERVER_HOST: ${{ secrets.SERVER_HOST }}
+        SERVER_USER: ${{ secrets.SERVER_USER }}
+        SERVER_PORT: ${{ secrets.SERVER_PORT }}
+      run: |
+        if [ -n "$DEPLOY_KEY" ] && [ -n "$SERVER_HOST" ]; then
+          echo "🚀 开始自动部署..."
+          # 安装SSH客户端
+          sudo apt-get update && sudo apt-get install -y openssh-client
+          
+          # 设置SSH密钥
+          mkdir -p ~/.ssh
+          echo "$DEPLOY_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          
+          # 停止旧服务并部署新jar包
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no -p ${SERVER_PORT:-22} ${SERVER_USER}@${SERVER_HOST} \
+            'cd ~/clipboard-manager && ./stop-and-deploy.sh' || echo "部署脚本执行失败"
+          
+          # 上传新的jar包
+          scp -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no -P ${SERVER_PORT:-22} target/*.jar ${SERVER_USER}@${SERVER_HOST}:~/clipboard-manager/app.jar
+          
+          # 启动新服务
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no -p ${SERVER_PORT:-22} ${SERVER_USER}@${SERVER_HOST} \
+            'cd ~/clipboard-manager && nohup java -jar app.jar > app.log 2>&1 &'
+          
+          echo "✅ 部署完成！"
+        else
+          echo "⚠️ 未配置服务器信息，跳过自动部署"
+          echo "💡 如需启用自动部署，请在GitHub仓库的Settings > Secrets中添加以下密钥："
+          echo "   - DEPLOY_KEY: SSH私钥"
+          echo "   - SERVER_HOST: 服务器地址"
+          echo "   - SERVER_USER: 服务器用户名"
+          echo "   - SERVER_PORT: SSH端口(可选，默认22)"
+        fi
+    
+    - name: 📝 生成发布说明
+      if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+      run: |
+        echo "## 🎉 部署成功！" >> release-notes.md
+        echo "" >> release-notes.md
+        echo "**提交信息：** $(git log -1 --pretty=format:'%s')" >> release-notes.md
+        echo "**提交者：** $(git log -1 --pretty=format:'%an')" >> release-notes.md
+        echo "**提交时间：** $(git log -1 --pretty=format:'%ci')" >> release-notes.md
+        echo "" >> release-notes.md
+        echo "### 📋 应用信息" >> release-notes.md
+        echo "- 应用名称：剪贴板管理器" >> release-notes.md
+        echo "- 访问地址：http://your-server:2345" >> release-notes.md
+        echo "- 构建时间：$(date '+%Y-%m-%d %H:%M:%S')" >> release-notes.md
+    
+    - name: 📤 上传发布说明
+      if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+      uses: actions/upload-artifact@v3
+      with:
+        name: release-notes
+        path: release-notes.md
