@@ -54,16 +54,24 @@ jobs:
           echo "$DEPLOY_KEY" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
           
-          # 停止旧服务并部署新jar包
+          # 创建部署目录并设置权限
           ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no -p ${SERVER_PORT:-22} ${SERVER_USER}@${SERVER_HOST} \
-            'cd ~/clipboard-manager && ./stop-and-deploy.sh' || echo "部署脚本执行失败"
+            'sudo mkdir -p /www/clip && sudo chown -R ${SERVER_USER}:${SERVER_USER} /www/clip && chmod -R 755 /www/clip' || echo "创建目录失败"
+          
+          # 创建停止脚本（如果不存在）
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no -p ${SERVER_PORT:-22} ${SERVER_USER}@${SERVER_HOST} \
+            'cd /www/clip && if [ ! -f stop-and-deploy.sh ]; then echo "#!/bin/bash" > stop-and-deploy.sh && echo "pkill -f \"java -jar app.jar\" 2>/dev/null || echo \"无旧进程需要停止\"" >> stop-and-deploy.sh && chmod +x stop-and-deploy.sh; fi' || echo "创建停止脚本失败"
+          
+          # 检查并停止旧服务
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no -p ${SERVER_PORT:-22} ${SERVER_USER}@${SERVER_HOST} \
+            'cd /www/clip && [ -f stop-and-deploy.sh ] && ./stop-and-deploy.sh || echo "无停止脚本或脚本执行失败"' || echo "停止服务失败"
           
           # 上传新的jar包
-          scp -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no -P ${SERVER_PORT:-22} target/*.jar ${SERVER_USER}@${SERVER_HOST}:~/clipboard-manager/app.jar
+          scp -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no -P ${SERVER_PORT:-22} target/*.jar ${SERVER_USER}@${SERVER_HOST}:/www/clip/app.jar || echo "上传jar包失败"
           
-          # 启动新服务
+          # 启动新服务（带更好的错误处理）
           ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no -p ${SERVER_PORT:-22} ${SERVER_USER}@${SERVER_HOST} \
-            'cd ~/clipboard-manager && nohup java -jar app.jar > app.log 2>&1 &'
+            'cd /www/clip && pkill -f "java -jar app.jar" 2>/dev/null || echo "无旧进程需要停止"; nohup java -jar app.jar > app.log 2>&1 & sleep 3 && ps aux | grep "java -jar app.jar" | grep -v grep || echo "服务启动失败"' || echo "启动服务失败"
           
           echo "✅ 部署完成！"
         else
