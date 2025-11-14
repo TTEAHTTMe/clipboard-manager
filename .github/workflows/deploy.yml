@@ -69,9 +69,22 @@ jobs:
           # 上传新的jar包
           scp -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no -P ${SERVER_PORT:-22} target/*.jar ${SERVER_USER}@${SERVER_HOST}:/www/clip/app.jar || echo "上传jar包失败"
           
-          # 启动新服务（带更好的错误处理）
+          # 启动新服务（带更好的错误处理和数据库检查）
           ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no -p ${SERVER_PORT:-22} ${SERVER_USER}@${SERVER_HOST} \
-            'cd /www/clip && pkill -f "java -jar app.jar" 2>/dev/null || echo "无旧进程需要停止"; nohup java -jar app.jar > app.log 2>&1 & sleep 3 && ps aux | grep "java -jar app.jar" | grep -v grep || echo "服务启动失败"' || echo "启动服务失败"
+            'cd /www/clip && \
+            echo "检查数据库文件..." && ls -la clipboard.db 2>/dev/null || echo "数据库文件不存在，将自动创建" && \
+            echo "停止旧服务..." && pkill -f "java -jar app.jar" 2>/dev/null || echo "无旧进程需要停止" && \
+            echo "启动新服务..." && nohup java -jar app.jar > app.log 2>&1 & && \
+            sleep 5 && \
+            if ps aux | grep "java -jar app.jar" | grep -v grep > /dev/null; then \
+              echo "✅ 应用启动成功" && \
+              sleep 2 && \
+              curl -s http://localhost:2345/ > /dev/null && echo "✅ HTTP服务正常" || echo "⚠️ HTTP服务可能有问题"; \
+            else \
+              echo "❌ 应用启动失败" && \
+              echo "📋 错误日志:" && \
+              tail -10 app.log; \
+            fi' || echo "启动服务失败"
           
           echo "✅ 部署完成！"
         else
