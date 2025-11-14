@@ -91,15 +91,30 @@ handle_port_conflict() {
 # 函数：停止旧服务
 stop_old_service() {
     echo -e "${BLUE}=== 停止旧服务 ===${NC}"
-    if pgrep -f "java -jar ${JAR_FILE}" > /dev/null; then
+    
+    # 获取Java进程PID
+    JAVA_PID=$(ps aux | grep "java.*${JAR_FILE}" | grep -v grep | awk '{print $2}' | head -1)
+    
+    if [ -n "$JAVA_PID" ]; then
+        echo -e "${YELLOW}发现运行中的服务 (PID: ${JAVA_PID})${NC}"
         echo -e "${YELLOW}正在停止旧服务...${NC}"
-        pkill -f "java -jar ${JAR_FILE}" 2>/dev/null || true
-        sleep 3
         
-        # 确保进程已停止
-        if pgrep -f "java -jar ${JAR_FILE}" > /dev/null; then
+        # 发送停止信号
+        if kill "$JAVA_PID" 2>/dev/null; then
+            echo -e "${YELLOW}已发送停止信号，等待服务停止...${NC}"
+            
+            # 等待最多10秒
+            for i in {1..10}; do
+                if ! kill -0 "$JAVA_PID" 2>/dev/null; then
+                    echo -e "${GREEN}✅ 旧服务已停止${NC}"
+                    return 0
+                fi
+                sleep 1
+            done
+            
+            # 如果还在运行，强制停止
             echo -e "${RED}❌ 强制停止旧服务${NC}"
-            pkill -9 -f "java -jar ${JAR_FILE}" 2>/dev/null || true
+            kill -9 "$JAVA_PID" 2>/dev/null || true
             sleep 2
         fi
         

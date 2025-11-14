@@ -68,18 +68,32 @@ jobs:
           echo "🔧 执行部署..."
           DEPLOY_SUCCESS=true
           
+          echo "=== 停止旧服务 ==="
           ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no -p ${SERVER_PORT:-22} ${SERVER_USER}@${SERVER_HOST} \
             'cd /www/clip && \
-            chmod +x start.sh stop.sh && \
-            echo "=== 停止旧服务 ===" && \
-            ./stop.sh || { echo "停止服务时出错，继续部署..."; } && \
-            echo "=== 检查端口占用 ===" && \
-            if netstat -tuln 2>/dev/null | grep -q ":2345 "; then \
+            chmod +x start.sh stop.sh'
+          
+          STOP_EXIT_CODE=0
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no -p ${SERVER_PORT:-22} ${SERVER_USER}@${SERVER_HOST} \
+            'cd /www/clip && ./stop.sh' || STOP_EXIT_CODE=$?
+          
+          if [ $STOP_EXIT_CODE -eq 0 ]; then
+            echo "✅ 服务停止成功"
+          else
+            echo "⚠️  服务停止可能失败，继续部署..."
+          fi
+          
+          echo "=== 检查端口占用 ==="
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no -p ${SERVER_PORT:-22} ${SERVER_USER}@${SERVER_HOST} \
+            'if netstat -tuln 2>/dev/null | grep -q ":2345 "; then \
               echo "端口2345被占用，尝试停止占用进程..." && \
               pkill -f "java -jar app.jar" 2>/dev/null || true && \
               sleep 3; \
-            fi && \
-            echo "=== 启动新服务 ===" && \
+            fi'
+          
+          echo "=== 启动新服务 ==="
+          DEPLOY_OUTPUT=$(ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no -p ${SERVER_PORT:-22} ${SERVER_USER}@${SERVER_HOST} \
+            'cd /www/clip && \
             echo "当前目录: $(pwd)" && \
             echo "文件列表: $(ls -la)" && \
             echo "开始执行 start.sh..." && \
@@ -87,7 +101,9 @@ jobs:
             echo "start.sh 执行完成，返回码: $?" && \
             echo "=== 检查最终状态 ===" && \
             ps aux | grep java || echo "无Java进程" && \
-            netstat -tuln | grep :2345 || echo "端口2345未监听"' || DEPLOY_SUCCESS=false
+            netstat -tuln | grep :2345 || echo "端口2345未监听"') || DEPLOY_SUCCESS=false
+          
+          echo "$DEPLOY_OUTPUT"
           
           if [ "$DEPLOY_SUCCESS" = true ]; then
             echo "✅ 部署完成！"
