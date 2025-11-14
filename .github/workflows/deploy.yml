@@ -58,52 +58,21 @@ jobs:
           ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no -p ${SERVER_PORT:-22} ${SERVER_USER}@${SERVER_HOST} \
             'sudo mkdir -p /www/clip && sudo chown -R ${SERVER_USER}:${SERVER_USER} /www/clip && chmod -R 755 /www/clip' || echo "创建目录失败"
           
-          # 创建停止脚本（如果不存在）
-          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no -p ${SERVER_PORT:-22} ${SERVER_USER}@${SERVER_HOST} \
-            'cd /www/clip && if [ ! -f stop-and-deploy.sh ]; then echo "#!/bin/bash" > stop-and-deploy.sh && echo "pkill -f \"java -jar app.jar\" 2>/dev/null || echo \"无旧进程需要停止\"" >> stop-and-deploy.sh && chmod +x stop-and-deploy.sh; fi' || echo "创建停止脚本失败"
-          
-          # 检查并停止旧服务
-          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no -p ${SERVER_PORT:-22} ${SERVER_USER}@${SERVER_HOST} \
-            'cd /www/clip && [ -f stop-and-deploy.sh ] && ./stop-and-deploy.sh || echo "无停止脚本或脚本执行失败"' || echo "停止服务失败"
-          
-          # 上传新的jar包
+          # 上传部署脚本和jar包
+          echo "📤 上传部署文件..."
           scp -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no -P ${SERVER_PORT:-22} target/*.jar ${SERVER_USER}@${SERVER_HOST}:/www/clip/app.jar || echo "上传jar包失败"
+          scp -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no -P ${SERVER_PORT:-22} start.sh ${SERVER_USER}@${SERVER_HOST}:/www/clip/start.sh || echo "上传start.sh失败"
+          scp -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no -P ${SERVER_PORT:-22} stop.sh ${SERVER_USER}@${SERVER_HOST}:/www/clip/stop.sh || echo "上传stop.sh失败"
           
-          # 启动新服务（优化版本）
+          # 设置脚本权限并执行部署
+          echo "🔧 执行部署..."
           ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no -p ${SERVER_PORT:-22} ${SERVER_USER}@${SERVER_HOST} \
-            'set -e && \
-            cd /www/clip && \
-            echo "=== 部署检查 ===" && \
-            if [ -f "clipboard.db" ]; then \
-              echo "✅ 数据库文件存在" && ls -lh clipboard.db; \
-            else \
-              echo "⚠️ 数据库文件不存在，将自动创建"; \
-            fi && \
+            'cd /www/clip && \
+            chmod +x start.sh stop.sh && \
             echo "=== 停止旧服务 ===" && \
-            if pgrep -f "java -jar app.jar" > /dev/null; then \
-              pkill -f "java -jar app.jar" && echo "✅ 已停止旧服务" && sleep 2; \
-            else \
-              echo "ℹ️ 无旧进程需要停止"; \
-            fi && \
+            ./stop.sh || echo "停止服务时出错，继续部署..." && \
             echo "=== 启动新服务 ===" && \
-            nohup java -jar app.jar > app.log 2>&1 & \
-            APP_PID=$! && \
-            sleep 5 && \
-            if ps -p $APP_PID > /dev/null; then \
-              echo "✅ 应用启动成功 (PID: $APP_PID)"; \
-              sleep 2 && \
-              if curl -s http://localhost:2345/ > /dev/null; then \
-                echo "✅ HTTP服务正常运行"; \
-              else \
-                echo "⚠️ HTTP服务可能有问题，检查日志..."; \
-                tail -10 app.log; \
-              fi; \
-            else \
-              echo "❌ 应用启动失败"; \
-              echo "=== 错误日志 ==="; \
-              tail -10 app.log; \
-              exit 1; \
-            fi' || echo "启动服务失败"
+            ./start.sh' || echo "部署失败"
           
           echo "✅ 部署完成！"
         else
