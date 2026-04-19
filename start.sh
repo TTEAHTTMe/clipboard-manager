@@ -248,16 +248,13 @@ show_status() {
         return 0
     else
         echo -e "${RED}❌ 服务未运行${NC}"
-        return 1
-    fi
         
         # 显示日志中的关键信息
         if [ -f "${LOG_FILE}" ]; then
             echo -e "${BLUE}=== 启动日志 ===${NC}"
             tail -5 ${LOG_FILE}
         fi
-    else
-        echo -e "${RED}❌ 服务未运行${NC}"
+        return 1
     fi
 }
 
